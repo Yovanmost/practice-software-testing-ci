@@ -1,4 +1,4 @@
-name: Run Playwright Tests 🎭
+name: Run Tests
 
 on:
   push:
@@ -19,6 +19,35 @@ jobs:
       - name: Sleep for 60 seconds
         run: sleep 60s
         shell: bash
+
+      # --- Start Debugging Section ---
+      # Step 1: Check Laravel API Container Logs
+      # This is the most crucial step. It will print any PHP or Laravel errors.
+      - name: Check Laravel API Logs for Errors 🕵️‍♂️
+        run: docker-compose logs laravel-api
+
+      # Step 2: Verify DB_HOST Environment Variable
+      # Ensures the laravel-api container sees the correct database host.
+      - name: Verify DB_HOST variable
+        run: |
+          echo "Verifying DB_HOST environment variable..."
+          docker-compose exec -T laravel-api php -r "echo getenv('DB_HOST');"
+
+      # Step 3: Inspect Database Connectivity
+      # A non-interactive way to check if the laravel-api container can connect to mariadb.
+      - name: Test Database Connection 🗄️
+        run: |
+          echo "Testing database connection from laravel-api container..."
+          docker-compose exec -T laravel-api bash -c "mysql -h mariadb -u root -proot -e 'SHOW DATABASES;'"
+
+      # Step 4: Correct and Verify File Permissions
+      # This step checks permissions and then corrects them if needed.
+      - name: Fix File Permissions on Storage and Cache 📂
+        run: |
+          echo "Checking and correcting file permissions..."
+          docker-compose exec -T laravel-api bash -c "chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache && ls -ld /var/www/storage /var/www/bootstrap/cache"
+      # --- End Debugging Section ---
+
       - name: Create & Seed database 🌱
         run: |
           docker compose exec -T laravel-api php artisan migrate:refresh --seed
